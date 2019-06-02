@@ -1,0 +1,42 @@
+override fun handle(createdMessageEvent: CreatedMessageEvent) {
+        LOGGER.info("invocing method setResult on deferred object: ${deferredMap[createdMessageEvent.uniqueNumber]}")
+
+        val out = Base64.getDecoder().decode(createdMessageEvent.output)
+        
+        deferredMap[createdMessageEvent.uniqueNumber]
+//                ?.setResult(ResponseEntity.ok(createdMessageEvent.messageResponse))
+//                ?.setResult(ResponseEntity.ok(MessageResponseV2(createdMessageEvent.output)))
+                ?.setResult(ResponseEntity.ok(InputStreamResource(out.inputStream())))
+
+        /*val out = createdMessageEvent.output.toByteArray(charset("UTF-8"))
+        val destinationFile = File("output.pdf")
+        val fos = FileOutputStream(destinationFile)
+        fos.write(out)
+        fos.flush()
+        fos.close()*/
+
+        val destinationFile = File("output.pdf")
+        val fos = FileOutputStream(destinationFile)
+        fos.write(out)
+        fos.flush()
+        fos.close()
+
+        emitterMap[createdMessageEvent.messageResponse.emitterNumber]
+                ?.send(SseEmitter.event()
+                        .data(createdMessageEvent.messageResponse)
+                        .name("data set for emiter no.: ${createdMessageEvent.messageResponse.emitterNumber}"))
+    }
+    
+     override fun createPdf(): String {
+//        val destinationFile = File("output.pdf")
+        val sourceFile = File("src/main/resources/Test.html")
+        val fis = FileInputStream(sourceFile)
+//        val fos = FileOutputStream(destinationFile)
+        val fos = ByteArrayOutputStream()
+        runProcess(fis, fos)
+//        val result = fos.toString(charset("UTF-8"))
+//        val result = String(fos.toByteArray(), Charset.forName("UTF-8"))
+        val result = Base64.getEncoder().encodeToString(fos.toByteArray())
+//        return fos
+        return result
+    }
